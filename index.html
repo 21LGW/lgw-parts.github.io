@@ -14,6 +14,7 @@
         table { border-collapse: collapse; width: 100%; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background-color: #f2f2f2; }
+        #errorMessage { color: red; display: none; }
     </style>
 </head>
 <body>
@@ -24,6 +25,7 @@
         <button onclick="checkLogin()">Login</button>
         <p id="error" style="color: red; display: none;">Invalid credentials</p>
     </div>
+    <div id="errorMessage"></div>
     <table id="partsTable">
         <thead>
             <tr>
@@ -38,7 +40,6 @@
     </table>
 
     <script>
-        // Hardcoded credentials (replace with secure values for LGW)
         const VALID_USERNAME = "lgwadmin";
         const VALID_PASSWORD = "parts2025";
 
@@ -50,43 +51,53 @@
             if (username === VALID_USERNAME && password === VALID_PASSWORD) {
                 document.getElementById("loginSection").style.display = "none";
                 document.getElementById("partsTable").style.display = "block";
-                fetchPartsData(); // Load data after successful login
+                fetchPartsData();
             } else {
                 error.style.display = "block";
             }
         }
 
-        // Replace with your Google Sheet ID and API Key
-        const SHEET_ID = "1660211813";
-        const API_KEY = "2ae889f445d9d8123ef7037f72ca3d22781cea3a";
+        const SHEET_ID = "1660211813"; // Replace with your actual Sheet ID
+        const API_KEY = "2ae889f445d9d8123ef7037f72ca3d22781cea3a"; // Replace with your actual API Key
 
         async function fetchPartsData() {
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A:E?key=${API_KEY}`;
+            const errorMessage = document.getElementById("errorMessage");
             try {
                 const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
+                }
                 const data = await response.json();
+                console.log("API Response:", data); // Log the response for debugging
+                if (!data.values || data.values.length <= 1) {
+                    errorMessage.innerText = "No data found in the Google Sheet or sheet is empty.";
+                    errorMessage.style.display = "block";
+                    return;
+                }
                 const rows = data.values;
                 const tbody = document.getElementById("partsBody");
-                tbody.innerHTML = ""; // Clear existing data
+                tbody.innerHTML = "";
                 for (let i = 1; i < rows.length; i++) {
                     const row = rows[i];
                     tbody.innerHTML += `
                         <tr>
-                            <td>${row[0]}</td>
-                            <td>${row[1]}</td>
-                            <td>${row[2]}</td>
-                            <td>${row[3]}</td>
-                            <td>${row[4]}</td>
+                            <td>${row[0] || '-'}</td>
+                            <td>${row[1] || '0'}</td>
+                            <td>${row[2] || '0'}</td>
+                            <td>${row[3] || '0'}</td>
+                            <td>${row[4] || '-'}</td>
                         </tr>
                     `;
                 }
             } catch (error) {
-                console.error("Error fetching data:", error);
+                errorMessage.innerText = `Error fetching data: ${error.message}`;
+                errorMessage.style.display = "block";
+                console.error("Fetch Error:", error);
             }
         }
 
-        // Refresh data every 60 seconds after login
-        setInterval(fetchPartsData, 60000);
+        setInterval(fetchPartsData, 60000); // Refresh every minute
     </script>
 </body>
 </html>
